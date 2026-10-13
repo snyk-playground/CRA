@@ -1,4 +1,4 @@
-"""Resolves --group ID to every org in the group, then each org's projects (FR-2a)."""
+"""Resolves --group ID to every org in the group, then each org's projects."""
 
 from __future__ import annotations
 

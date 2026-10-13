@@ -1,7 +1,7 @@
-"""Builds a single immutable RunConfig from parsed CLI args and the environment (FR-5).
+"""Builds a single immutable RunConfig from parsed CLI args and the environment.
 
 config.py is the only module besides cli.py that is allowed to read
-os.environ (see §8.3) -- everything downstream (discovery, sbom, vex,
+os.environ -- everything downstream (discovery, sbom, vex,
 writers) takes a RunConfig, never argparse.Namespace or the environment
 directly.
 """
@@ -18,7 +18,7 @@ from .errors import ConfigError
 SPDX_FORMAT_PREFIX = "spdx"
 
 # Latest known-GA Snyk REST API version at the time this script was last
-# updated (FR-12). Snyk's REST API versions are dated and evolve
+# updated. Snyk's REST API versions are dated and evolve
 # independently of this script -- reverify against
 # https://apidocs.snyk.io before relying on this default long-term (Open
 # Risk #3). SNYK_API_VERSION lets an operator override the effective
@@ -31,7 +31,7 @@ API_VERSION_ENV_VAR = "SNYK_API_VERSION"
 
 @dataclass(frozen=True)
 class SourceSelection:
-    """The raw, as-supplied values for each of the six source flags (FR-2)."""
+    """The raw, as-supplied values for each of the six source flags."""
 
     orgs: Tuple[str, ...]
     targets: Tuple[str, ...]
@@ -72,7 +72,7 @@ class RunConfig:
 
 
 def resolve_token(args: argparse.Namespace) -> str:
-    """Resolves the API token per FR-5: --token takes precedence over SNYK_TOKEN."""
+    """Resolves the API token --token takes precedence over SNYK_TOKEN."""
     token = args.token or os.environ.get("SNYK_TOKEN")
     if not token:
         raise ConfigError(
@@ -84,7 +84,7 @@ def resolve_token(args: argparse.Namespace) -> str:
 
 def resolve_api_version(args: argparse.Namespace) -> str:
     """Resolves the API version: --api-version, then $SNYK_API_VERSION, then the
-    hardcoded default (FR-12, Open Risk #3)."""
+    hardcoded default ."""
     return args.api_version or os.environ.get(API_VERSION_ENV_VAR) or DEFAULT_API_VERSION
 
 
@@ -114,7 +114,7 @@ def build_config(args: argparse.Namespace) -> RunConfig:
         generate_vex = False
         vex_skip_reason = (
             f"--sbom-format {args.sbom_format} selected; VEX is not defined for "
-            "SPDX, so VEX generation will be skipped (FR-11)."
+            "SPDX, so VEX generation will be skipped."
         )
 
     return RunConfig(

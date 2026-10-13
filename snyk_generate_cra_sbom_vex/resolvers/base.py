@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 # Best-effort classification of Snyk's per-project `type` attribute into the
-# FR-1 scope (Open Source / Container feed the SBOM; everything else -- sast,
+# CRA scope (Open Source / Container feed the SBOM; everything else -- sast,
 # the various *config IaC types, custom -- does not). This list is not
 # authoritative: it should be reconciled against Snyk's project-type
 # reference before it is used to actually *drop* projects at the SBOM-fetch
@@ -23,13 +23,13 @@ _CONTAINER_TYPES = frozenset({"dockerfile", "linux", "rpm", "deb", "apk"})
 
 
 def is_in_scope_type(project_type: str) -> bool:
-    """Whether FR-1 would keep a project of this type in the SBOM/VEX output."""
+    """Whether the SBOM/VEX scope would keep a project of this type in the SBOM/VEX output."""
     return (project_type or "").lower() in _SCA_TYPES | _CONTAINER_TYPES
 
 
 @dataclass(frozen=True)
 class ResolvedProject:
-    """One (org, project) pair pulled in by a specific source argument (FR-2a)."""
+    """One (org, project) pair pulled in by a specific source argument."""
 
     org_id: str
     project_id: str

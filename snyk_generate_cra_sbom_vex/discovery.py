@@ -1,6 +1,6 @@
-"""Unions every resolver's output and de-duplicates by (org, project) (FR-2a, FR-6).
+"""Unions every resolver's output and de-duplicates by (org, project).
 
-FR-1's Open Source/Container scoping is annotated on each ResolvedProject
+Open Source/Container scoping is annotated on each ResolvedProject
 (see resolvers/base.py) but not yet enforced here by dropping rows --
 that gate belongs to the SBOM-fetch stage, not yet implemented.
 """
@@ -30,7 +30,7 @@ def discover(client: SnykClient, sources: SourceSelection) -> List[ResolvedProje
 
     Raises NoProjectsDiscoveredError if the union is empty, and whatever
     SourceNotFoundError/AuthenticationError a resolver raises for an
-    individual source (FR-14: these are unrecoverable, not per-project,
+    individual source (these are unrecoverable, not per-project,
     failures).
     """
     org_ids_cache: Optional[List[str]] = None
@@ -87,7 +87,7 @@ def discover(client: SnykClient, sources: SourceSelection) -> List[ResolvedProje
 
 def _deduplicate(resolved: List[ResolvedProject]) -> List[ResolvedProject]:
     """Collapses to one entry per (org, project), combining the source labels
-    of every argument that pulled it in, and sorts for stable output (NFR-2).
+    of every argument that pulled it in, and sorts for stable output.
     """
     by_key: Dict[Tuple[str, str], ResolvedProject] = {}
     sources_by_key: Dict[Tuple[str, str], List[str]] = {}

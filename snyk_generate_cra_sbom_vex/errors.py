@@ -1,9 +1,9 @@
-"""Exception hierarchy mapped to process exit codes (FR-14).
+"""Exception hierarchy mapped to process exit codes.
 
 The entry point catches SnykCraSbomVexError (or a subclass) at the top
-level and exits with the matching exit_code, per FR-14's requirement to
+level and exits with the matching exit_code, per the requirement to
 exit non-zero on any unrecoverable error. Subclasses below correspond to
-the specific unrecoverable-error cases FR-14 calls out; more may be added
+the specific unrecoverable-error cases called out; more may be added
 as discovery/sbom/vex modules are implemented.
 """
 
@@ -39,7 +39,7 @@ class NoProjectsDiscoveredError(SnykCraSbomVexError):
 
 
 class ProjectFetchError(SnykCraSbomVexError):
-    """A single project's SBOM/issues fetch failed and --fail-fast is set (FR-14)."""
+    """A single project's SBOM/issues fetch failed and --fail-fast is set."""
 
     exit_code = 6
 

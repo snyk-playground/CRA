@@ -1,4 +1,4 @@
-"""Resolves --target ID to the projects under it (FR-2a).
+"""Resolves --target ID to the projects under it.
 
 A target ID alone doesn't say which org it belongs to, so this probes
 every org the token can access (GET .../targets/{target_id}) until one

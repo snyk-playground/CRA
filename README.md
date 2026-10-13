@@ -16,9 +16,6 @@ organizations, targets, assets, projects, groups, and tags.
 > Review the output and validate it against your own compliance requirements
 > before relying on it.
 
-See `snyk-cra-sbom-vex-requirements.md.pdf` for the full requirements this
-implements.
-
 ## Requirements
 
 - Python 3.9 or later
@@ -134,11 +131,10 @@ relying on it as a source of CRA compliance evidence:
 
 - Aggregation and VEX derivation only support the default CycloneDX+JSON
   format (see the limitation noted above).
-- VEX de-duplication (FR-9a) groups occurrences by CVE, falling back to
+- VEX de-duplication groups occurrences by CVE, falling back to
   Snyk's own vulnerability key when no CVE is present. Whether that key is
   reliably stable for "the same vulnerability" across different projects has
-  not been confirmed against the live Issues API -- see Open Risk #8 in the
-  requirements doc.
+  not been confirmed against the live Issues API.
 - The `--asset` source depends on a Snyk endpoint
   (`/rest/orgs/{org}/inventory/assets`) that is not yet documented as GA at
   https://apidocs.snyk.io — reverify before relying on it long-term.

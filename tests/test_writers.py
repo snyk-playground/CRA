@@ -37,7 +37,7 @@ class WriteOutputsTests(unittest.TestCase):
             writers.write_outputs({"bomFormat": "CycloneDX"}, None, "cyclonedx1.6+json", "blocker/run1")
         self.assertIn("blocker", str(ctx.exception))
 
-    # -- CycloneDX: one merged file (FR-10) ----------------------------------
+    # -- CycloneDX: one merged file ----------------------------------
 
     def test_cyclonedx_writes_one_file_with_vex_embedded(self):
         sbom_doc = {"bomFormat": "CycloneDX", "components": []}
@@ -63,7 +63,7 @@ class WriteOutputsTests(unittest.TestCase):
         self.assertIsNone(result.vex_path)
         self.assertFalse(result.vex_embedded)
 
-    # -- SPDX: two separate files (FR-10) ------------------------------------
+    # -- SPDX: two separate files ------------------------------------
 
     def test_spdx_writes_two_separate_files(self):
         sbom_doc = {"spdxVersion": "SPDX-2.3"}

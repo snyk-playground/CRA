@@ -1,33 +1,33 @@
-"""Derives a CycloneDX VEX document from each project's issue/ignore data (FR-9, FR-3, FR-4).
+"""Derives a CycloneDX VEX document from each project's issue/ignore data.
 
-Open Risk #2 asked which API is authoritative for ignore-reason
-metadata. Confirmed against the live OpenAPI spec
+Which API is authoritative for ignore-reason metadata was confirmed
+against the live OpenAPI spec
 (https://api.snyk.io/rest/openapi/{api-version}) while building this
 module: the REST issues endpoint's `attributes.ignored` is only a
 boolean, and its `relationships.ignore` is an opaque {id, type:
 "ignore"} reference with no path in this API version to fetch the
 ignore's actual reason/expiry. That detail is only available from the
 legacy v1 `GET /v1/org/{org}/project/{project}/ignores` endpoint, keyed
-by issue ID, in the reasonType/reason/expires shape FR-3's mapping
-table is written against -- so this module reads the vulnerability list
+by issue ID, in the reasonType/reason/expires shape the justification
+mapping below is written against -- so this module reads the vulnerability list
 from the REST API and ignore reasons from the legacy v1 API.
 
 VEX entries are cross-referenced to the aggregate SBOM via
 MergeResult.component_lookup (built while aggregating, from the same
 project-scoped package name/version each issue's `coordinates` report),
-so VEX can only be derived once an aggregate SBOM exists (FR-3: "only
-CycloneDX+JSON" aggregates have one).
+so VEX can only be derived once an aggregate SBOM exists (only
+CycloneDX+JSON aggregates have one).
 
-Per FR-9a (v0.6), a vulnerability that affects more than one component
+A vulnerability that affects more than one component
 occurrence -- because the same underlying vulnerability surfaces as a
 distinct per-project issue in every project a package appears in, and/or
-FR-8 now keeps every duplicate occurrence rather than collapsing them --
+the aggregate SBOM keeps every duplicate occurrence rather than collapsing them --
 is de-duplicated to exactly one vulnerability entry, listing every
 affected occurrence in its `affects` array and an `snyk:occurrenceCount`
 property. Grouping is keyed on the underlying vulnerability identifier
 (CVE, or the Snyk vulnerability key as a fallback -- see
 _preferred_vuln_id), never the per-project issue ID, since the issue ID
-differs project to project for the same flaw (Open Risk #8). If the
+differs project to project for the same flaw. If the
 resolved per-occurrence analysis states disagree (e.g. ignored in one
 project but not another), the least-suppressed state wins (open/
 unignored beats any ignored state) and the conflict is reported back to
@@ -49,8 +49,8 @@ from .snyk_api.client import SnykClient
 logger = logging.getLogger(__name__)
 
 # CycloneDX's fixed vocabulary for analysis.justification -- it is a code,
-# not free text (FR-4 explicitly warns against "guessing a justification
-# code"), so a Snyk ignore comment is only used here when it already reads
+# not free text (guessing a justification
+# code from free text is unsafe), so a Snyk ignore comment is only used here when it already reads
 # as one of these, never paraphrased or inferred.
 _VALID_JUSTIFICATION_CODES = {
     "code_not_present",
@@ -65,7 +65,7 @@ _VALID_JUSTIFICATION_CODES = {
 }
 _NON_ALNUM_RE = re.compile(r"[\s\-]+")
 
-# FR-9a's "least-suppressed state" ordering: lower rank wins a conflict.
+# The "least-suppressed state" ordering: lower rank wins a conflict.
 # Plain open/unignored is least suppressed; a wont-fix override is still
 # CycloneDX state "exploitable" but is nonetheless a suppression decision,
 # so it ranks just below plain-open; not_affected is the most suppressed.
@@ -79,10 +79,10 @@ _RANK_OTHER = 4
 @dataclass(frozen=True)
 class VexBuildResult:
     document: Optional[Dict[str, Any]]
-    vulnerability_count: int  # unique vulnerabilities after FR-9a de-duplication
-    needs_manual_justification: int  # FR-4: ignores flagged for manual review rather than guessed
+    vulnerability_count: int  # unique vulnerabilities after de-duplication
+    needs_manual_justification: int  # ignores flagged for manual review rather than guessed
     unmatched_count: int  # issues that couldn't be linked to an aggregate SBOM component
-    conflicting_state_count: int  # FR-9a: vulnerabilities whose per-occurrence states disagreed
+    conflicting_state_count: int  # vulnerabilities whose per-occurrence states disagreed
     skipped_reason: Optional[str] = None
 
 
@@ -122,7 +122,7 @@ def _preferred_vuln_id(issue_attrs: Dict[str, Any]) -> str:
 
 
 def _build_analysis(ignore_details: Optional[Dict[str, Any]]) -> Tuple[Dict[str, Any], bool]:
-    """Returns (analysis block, needs_manual_justification) per FR-3's table / FR-4."""
+    """Returns (analysis block, needs_manual_justification)."""
     if ignore_details is None:
         return {"state": "exploitable"}, False
 
@@ -137,8 +137,8 @@ def _build_analysis(ignore_details: Optional[Dict[str, Any]]) -> Tuple[Dict[str,
 
     if reason_type == "temporary-ignore":
         # CycloneDX's analysis object has no dedicated "review by" field, so
-        # the ignore's expiry (FR-3: "must carry the ignore's expiry/review
-        # date") is surfaced as free text in `detail` rather than forced
+        # the ignore's expiry/review date
+        # is surfaced as free text in `detail` rather than forced
         # into a semantically mismatched field.
         expires = ignore_details.get("expires")
         detail_parts = [p for p in (f"Scheduled for review by {expires}." if expires else None, reason_text) if p]
@@ -150,7 +150,7 @@ def _build_analysis(ignore_details: Optional[Dict[str, Any]]) -> Tuple[Dict[str,
     if reason_type == "not-vulnerable":
         justification_code = _normalize_justification_code(reason_text) if reason_text else None
         if justification_code is None:
-            # FR-4: never fabricate a justification code from free text --
+            # Never fabricate a justification code from free text --
             # fall back to in_triage and flag for manual review instead.
             analysis = {"state": "in_triage"}
             if reason_text:
@@ -158,14 +158,14 @@ def _build_analysis(ignore_details: Optional[Dict[str, Any]]) -> Tuple[Dict[str,
             return analysis, True
         return {"state": "not_affected", "justification": justification_code, "detail": reason_text}, False
 
-    # An ignore exists but with a reasonType FR-3's table doesn't cover (or
+    # An ignore exists but with a reasonType the mapping above doesn't cover (or
     # the ignore lookup found something structurally unexpected) -- treat
     # conservatively as needing manual review rather than guessing.
     return {"state": "in_triage"}, True
 
 
 def _suppression_rank(analysis: Dict[str, Any]) -> int:
-    """FR-9a's least-suppressed-state ordering; lower wins a conflict."""
+    """Least-suppressed-state ordering; lower wins a conflict."""
     state = analysis.get("state")
     if state == "exploitable":
         return _RANK_WONT_FIX if "will_not_fix" in (analysis.get("response") or []) else _RANK_OPEN
@@ -204,9 +204,9 @@ def derive_vex(
 
     Raises nothing project-specific: an issue that can't be matched to an
     aggregate component, or an ignore lacking a recognized justification,
-    is counted and reported rather than treated as a fatal error (FR-14's
-    "continue past a single project's failure" spirit extended to
-    per-issue anomalies). Per FR-9a, occurrences of the same underlying
+    is counted and reported rather than treated as a fatal error (in the same spirit as
+    continuing past a single project's failure, extended to
+    per-issue anomalies). Occurrences of the same underlying
     vulnerability (by vuln ID, across projects and across duplicate
     component occurrences within a project) are grouped into one
     vulnerability entry before the document is built.
@@ -248,7 +248,7 @@ def derive_vex(
             for issue in issues:
                 attrs = issue.get("attributes") or {}
                 if attrs.get("type") != "package_vulnerability":
-                    continue  # license/config/code findings aren't SBOM components (FR-1's scope, extended)
+                    continue  # license/config/code findings aren't SBOM components
 
                 component_refs = _match_component_refs(attrs, merge_result.component_lookup, project.org_id, project.project_id)
                 if not component_refs:
@@ -268,7 +268,7 @@ def derive_vex(
                     logger.warning(
                         "manual justification required for %s in %s/%s: the ignore's reason "
                         "doesn't map to a recognized justification code, so in_triage was "
-                        "emitted instead of not_affected (FR-4)",
+                        "emitted instead of not_affected",
                         attrs.get("key"),
                         project.org_id,
                         project.project_id,
@@ -299,7 +299,7 @@ def derive_vex(
             conflicting_states += 1
             logger.warning(
                 "conflicting per-occurrence VEX state collapsed for %s across %d occurrence(s): "
-                "resolved to the least-suppressed state (FR-9a)",
+                "resolved to the least-suppressed state",
                 vuln_id,
                 len(occurrences),
             )
@@ -319,7 +319,7 @@ def derive_vex(
         "bomFormat": "CycloneDX",
         "specVersion": merge_result.document["specVersion"],
         # Shared with the aggregate SBOM so a VEX consumer can cross-reference
-        # the two documents as one unit (FR-3).
+        # the two documents as one unit.
         "serialNumber": merge_result.document["serialNumber"],
         "version": 1,
         "vulnerabilities": vulnerabilities,

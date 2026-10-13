@@ -1,7 +1,7 @@
-"""HTTP 429 backoff/retry policy (FR-15).
+"""HTTP 429 backoff/retry policy.
 
-FR-15 also asks for the retry count/backoff to be configurable via CLI
-flags; that surface is left for a later pass since the current job of
+Making the retry count/backoff configurable via CLI
+flags is not implemented; that surface is left for a later pass since the current job of
 this module is just to keep discovery from tripping the API's rate
 limit with the hardcoded defaults below.
 """

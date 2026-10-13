@@ -1,16 +1,16 @@
-"""Writes the aggregate SBOM and VEX documents to disk (FR-10).
+"""Writes the aggregate SBOM and VEX documents to disk.
 
 Only CycloneDX+JSON documents exist to write today, since merge_sboms/
 derive_vex only produce one for that format combination -- an XML or
 SPDX --sbom-format run has nothing here to write yet (its skip reason
 was already reported by the merge/VEX steps).
 
-Per v0.6 (FR-10, FR-11), where VEX content lands depends on the selected
+Where VEX content lands depends on the selected
 SBOM format:
 
 - CycloneDX: SBOM and VEX are written to a single file -- the VEX
   vulnerabilities/analysis content is embedded directly into the
-  aggregate SBOM document (FR-3) -- named from --output-prefix plus the
+  aggregate SBOM document -- named from --output-prefix plus the
   format's native extension (default: sbom.cdx.json).
 - SPDX: written as two separate files, the SPDX SBOM and a standalone
   CycloneDX VEX document (the bom variant containing only a
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SBOM_BASENAME = "sbom"
 DEFAULT_VEX_BASENAME = "vex"
-_VEX_EXTENSION = "cdx.json"  # the standalone VEX document is always CycloneDX (FR-3)
+_VEX_EXTENSION = "cdx.json"  # the standalone VEX document is always CycloneDX
 
 
 @dataclass(frozen=True)
@@ -47,7 +47,7 @@ class WriteResult:
 
 
 def _native_extension(sbom_format: str) -> str:
-    """The on-disk extension for a --sbom-format value (FR-10)."""
+    """The on-disk extension for a --sbom-format value."""
     if sbom_format.startswith("cyclonedx"):
         return "cdx.xml" if sbom_format.endswith("+xml") else "cdx.json"
     if sbom_format.startswith("spdx"):

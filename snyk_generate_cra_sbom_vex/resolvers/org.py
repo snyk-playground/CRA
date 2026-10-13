@@ -1,4 +1,4 @@
-"""Resolves --org ID to every in-scope-or-not project in that org (FR-2a)."""
+"""Resolves --org ID to every in-scope-or-not project in that org."""
 
 from __future__ import annotations
 

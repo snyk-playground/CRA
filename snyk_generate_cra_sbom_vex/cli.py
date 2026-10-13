@@ -1,8 +1,8 @@
-"""Command-line argument parsing and validation (FR-2, FR-2a).
+"""Command-line argument parsing and validation.
 
-This module owns the CLI surface described in the requirements doc, §4.
+This module owns the CLI surface.
 Nothing below cli.py is permitted to parse arguments or read the
-environment directly (see §8.3), so this is the single place the flag
+environment directly, so this is the single place the flag
 set is defined.
 """
 
@@ -15,7 +15,7 @@ from .config import API_VERSION_ENV_VAR, DEFAULT_API_VERSION
 
 PROG_NAME = "snyk-generate-cra-sbom-vex"
 
-# Formats the Snyk SBOM API is documented to support (FR-11). SPDX has no
+# Formats the Snyk SBOM API is documented to support. SPDX has no
 # VEX equivalent, so selecting an spdx* format disables VEX generation
 # (see config.build_config).
 SBOM_FORMAT_CHOICES: Tuple[str, ...] = (
@@ -57,8 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     sources = parser.add_argument_group(
         "source selection",
         "At least one of these six flags is required. Each is repeatable and all "
-        "six are freely combinable (FR-2); the union of everything they resolve "
-        "to is de-duplicated by (org, project) before SBOM/VEX generation (FR-2a).",
+        "six are freely combinable; the union of everything they resolve "
+        "to is de-duplicated by (org, project) before SBOM/VEX generation.",
     )
     sources.add_argument(
         "--org",
@@ -81,7 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="ID",
         help=(
             "A Snyk Asset Inventory ID. Resolution depends on an unconfirmed API "
-            "(Open Risk #1) and may be unavailable."
+            "and may be unavailable."
         ),
     )
     sources.add_argument(
@@ -172,7 +172,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Enable verbose/debug logging: every HTTP request/response (token "
             "redacted), pagination progress, per-project status, source "
             "resolution, and VEX vulnerability de-duplication/conflict "
-            "decisions (FR-9a)."
+            "decisions."
         ),
     )
 
@@ -183,7 +183,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     """Parses and validates CLI arguments.
 
     Exits the process via argparse's usual SystemExit(2) behavior on a
-    malformed flag, and on the FR-2 "at least one source" rule below.
+    malformed flag, and on the "at least one source" rule below.
     """
     parser = build_parser()
     args = parser.parse_args(argv)

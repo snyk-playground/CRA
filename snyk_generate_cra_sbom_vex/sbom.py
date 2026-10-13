@@ -1,24 +1,24 @@
-"""Fetches (FR-7) and aggregates (FR-8) per-project SBOM documents.
+"""Fetches and aggregates per-project SBOM documents.
 
-Per FR-1, only projects classified in-scope (Open Source/Container --
+Only projects classified in-scope (Open Source/Container --
 see resolvers/base.py) are fetched; others are skipped and logged in
-debug mode rather than attempted. Per FR-14, a single project's fetch
+debug mode rather than attempted. A single project's fetch
 failure is reported and the run continues by default; --fail-fast
 aborts the whole run on the first one instead.
 
 Aggregation (merge_sboms) is implemented for CycloneDX+JSON only -- the
-format FR-7/FR-8 describe concretely. XML and SPDX SBOMs are still
+format the aggregate document is built in. XML and SPDX SBOMs are still
 fetched, but aggregating them is out of scope for now (each has a
 meaningfully different merge story: XML needs its own parser, and SPDX
 uses packages/relationships rather than components/dependencies) and is
 reported back as a skip reason rather than attempted.
 
-Per v0.6 of the requirements doc, aggregation no longer de-duplicates
-components by purl (FR-8): every component occurrence from every
+Aggregation does not de-duplicate
+components by purl: every component occurrence from every
 fetched SBOM is kept, each with its own unique bom-ref, so the same
 library appearing in more than one project -- or more than once within
 a single project -- appears that many times in the output. VEX
-de-duplication of vulnerabilities *across* those occurrences (FR-9a) is
+de-duplication of vulnerabilities *across* those occurrences is
 vex.py's job, using component_lookup below to find every occurrence a
 given project-scoped (name, version) maps to.
 """
@@ -78,7 +78,7 @@ def fetch_sboms(
 
     Raises ProjectFetchError immediately if fail_fast is set and a fetch
     fails; otherwise records the failure in the returned list and moves
-    on to the next project (FR-14). With show_progress, a status bar tracks
+    on to the next project. With show_progress, a status bar tracks
     completed fetches against the number of in-scope projects.
     """
     results: List[SbomFetchResult] = []
@@ -92,7 +92,7 @@ def _fetch_all(client, projects, sbom_format, fail_fast, results, bar) -> None:
     for project in projects:
         if not project.in_scope:
             logger.debug(
-                "skipping SBOM fetch for %s/%s (type=%s, not Open Source/Container per FR-1)",
+                "skipping SBOM fetch for %s/%s (type=%s, not Open Source/Container)",
                 project.org_id,
                 project.project_id,
                 project.project_type,
@@ -135,7 +135,7 @@ def _fetch_all(client, projects, sbom_format, fail_fast, results, bar) -> None:
         results.append(SbomFetchResult(project=project, ok=True, document=document, item_count=item_count))
 
 
-# -- aggregate (FR-8) ---------------------------------------------------------
+# -- aggregate ---------------------------------------------------------
 
 _CYCLONEDX_JSON_FORMAT_RE = re.compile(r"^cyclonedx(?P<spec_version>\d+\.\d+)\+json$")
 
@@ -143,12 +143,12 @@ _CYCLONEDX_JSON_FORMAT_RE = re.compile(r"^cyclonedx(?P<spec_version>\d+\.\d+)\+j
 @dataclass(frozen=True)
 class MergeResult:
     document: Optional[Dict[str, Any]]
-    component_count: int  # every occurrence kept -- no purl-level de-duplication (FR-8)
+    component_count: int  # every occurrence kept -- no purl-level de-duplication
     dependency_count: int
     # (org_id, project_id, package_name, package_version) -> every occurrence's
-    # bom-ref within that project (usually one, but FR-8 allows a package to
+    # bom-ref within that project (usually one, but a package is allowed to
     # appear more than once within a single project too), so vex.py can find
-    # every affected occurrence for FR-9a's affects array without re-deriving
+    # every affected occurrence for the VEX affects array without re-deriving
     # _component_identity itself.
     component_lookup: Dict[Tuple[str, str, str, str], List[str]] = field(default_factory=dict)
     skipped_reason: Optional[str] = None
@@ -161,7 +161,7 @@ def _component_identity(component: Dict[str, Any]) -> str:
     Not every component carries a purl -- a Container project's root
     `metadata.component` (the scanned image itself) typically doesn't --
     so those fall back to (type, group, name, version). This is no
-    longer a de-duplication key (FR-8 keeps every occurrence); it only
+    longer a de-duplication key (every occurrence is kept); it only
     makes each occurrence's bom-ref traceable back to what it is.
     """
     purl = component.get("purl")
@@ -179,7 +179,7 @@ def _component_identity(component: Dict[str, Any]) -> str:
 def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> MergeResult:
     """Aggregates every successfully fetched SBOM into one CycloneDX document.
 
-    Per FR-8, components are *not* de-duplicated: every occurrence from
+    Components are *not* de-duplicated: every occurrence from
     every source document is kept, each assigned its own unique bom-ref
     (identity + source project + an incrementing per-project occurrence
     count, so even the same component appearing twice within one
@@ -198,7 +198,7 @@ def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> Merge
             component_lookup={},
             skipped_reason=(
                 f"aggregation is only implemented for CycloneDX+JSON formats; the "
-                f"{sbom_format} SBOMs already fetched were not aggregated (FR-8)."
+                f"{sbom_format} SBOMs already fetched were not aggregated."
             ),
         )
 
@@ -239,7 +239,7 @@ def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> Merge
         for component in local_components:
             identity = _component_identity(component)
             occurrence_counts[identity] += 1
-            # Unique per occurrence (FR-8): identity, plus the source project,
+            # Unique per occurrence: identity, plus the source project,
             # plus this project's own running count for that identity, so
             # duplicates within a single project's SBOM don't collide either.
             occurrence_ref = f"{identity}#{project.org_id}/{project.project_id}#{occurrence_counts[identity]}"
@@ -266,7 +266,7 @@ def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> Merge
             depends_on = {local_ref_map.get(d, d) for d in dependency.get("dependsOn") or []}
             dependency_edges[ref].update(depends_on)
 
-    # Sorted by bom-ref for NFR-2 idempotency (stable ordering across runs
+    # Sorted by bom-ref for idempotency (stable ordering across runs
     # against unchanged input), not to collapse anything.
     components.sort(key=lambda c: c["bom-ref"])
     dependencies = [
@@ -280,7 +280,7 @@ def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> Merge
         "specVersion": spec_version,
         # A fresh serialNumber/timestamp per run is normal CycloneDX practice
         # (they identify *this* BOM generation) and doesn't conflict with
-        # NFR-2's idempotency goal, which is about component/dependency
+        # the idempotency goal, which is about component/dependency
         # *ordering* being stable so diffs stay meaningful -- both are sorted
         # by bom-ref above for exactly that reason.
         "serialNumber": f"urn:uuid:{uuid.uuid4()}",

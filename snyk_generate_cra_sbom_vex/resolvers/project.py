@@ -1,4 +1,4 @@
-"""Resolves --project ID directly, with no listing lookup (FR-2a).
+"""Resolves --project ID directly, with no listing lookup.
 
 A project ID alone doesn't say which org it belongs to either, so --
 like --target -- this probes every org the token can access until one

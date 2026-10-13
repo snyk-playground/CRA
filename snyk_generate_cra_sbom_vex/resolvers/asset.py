@@ -1,7 +1,6 @@
-"""Resolves --asset ID to its underlying projects (FR-2a, Open Risk #1).
+"""Resolves --asset ID to its underlying projects.
 
-The requirements doc flagged Asset Inventory API availability as an
-open risk: no stable, documented endpoint for "list projects under an
+Asset Inventory API availability was an open risk: no stable, documented endpoint for "list projects under an
 asset ID" was confirmed during research. A live-tenant check while
 building this resolver (2026-09-22) found
 GET /rest/orgs/{org}/inventory/assets(/{asset}[/relationships/projects])

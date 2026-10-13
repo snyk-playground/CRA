@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """Entry point for the Snyk CRA SBOM/VEX generator.
 
-Per FR-16, this file is a thin shim: argument parsing is delegated to
+This file is a thin shim: argument parsing is delegated to
 snyk_generate_cra_sbom_vex.cli, and it holds no SBOM/VEX business logic
 of its own -- only logging setup and top-level error-handling/exit-code
-logic (FR-14).
+logic.
 
-This build implements the full pipeline: source resolution/discovery
-(FR-2, FR-2a, FR-6), per-project SBOM fetch (FR-7), aggregation into one
+This build implements the full pipeline: source resolution/discovery,
+per-project SBOM fetch, aggregation into one
 CycloneDX document that keeps every duplicate component occurrence
-rather than de-duplicating by purl (FR-8, CycloneDX+JSON only), VEX
+rather than de-duplicating by purl (CycloneDX+JSON only), VEX
 derivation from each project's issue/ignore data that de-duplicates
-vulnerabilities across those occurrences via the affects array (FR-9,
-FR-9a, CycloneDX+JSON only), and writing the output -- one combined
-file for CycloneDX, or a separate SBOM/VEX file pair for SPDX (FR-10).
+vulnerabilities across those occurrences via the affects array
+(CycloneDX+JSON only), and writing the output -- one combined
+file for CycloneDX, or a separate SBOM/VEX file pair for SPDX.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return exc.exit_code
 
     # Re-configure now that the token is known, so every subsequent log
-    # line has it redacted (FR-5, NFR-3).
+    # line has it redacted.
     logger = logging_setup.configure(debug=run_config.debug, redact=[run_config.token])
 
     if run_config.vex_skip_reason:
@@ -72,7 +72,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     org_count = len({p.org_id for p in projects})
     logger.info(
         "Discovered %d unique project(s) across %d org(s): %d in-scope for SBOM/VEX "
-        "(Open Source/Container), %d other type(s) (see requirements doc FR-1).",
+        "(Open Source/Container), %d other type(s).",
         len(projects),
         org_count,
         in_scope_count,

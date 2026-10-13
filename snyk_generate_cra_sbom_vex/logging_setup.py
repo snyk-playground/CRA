@@ -1,6 +1,6 @@
-"""Default and debug/verbose logging configuration, including token redaction (FR-13).
+"""Default and debug/verbose logging configuration, including token redaction.
 
-FR-5 and NFR-3 require the API token never be logged, even in --debug
+The API token must never be logged, even in --debug
 output. configure() takes an optional list of secret strings and
 attaches a filter that redacts any exact occurrence of them from every
 log record before it reaches a handler.

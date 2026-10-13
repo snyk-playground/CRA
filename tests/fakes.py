@@ -2,7 +2,7 @@
 
 Matches SnykClient's method surface exactly so resolvers/discovery.py
 can't tell the difference -- no unit test in this suite makes a network
-call (see requirements doc §8.4).
+call.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Snyk REST API client: authentication, pagination, and rate-limit handling.
 
-Per the requirements doc §8.3, all outbound Snyk API access is
+All outbound Snyk API access is
 centralized here -- no other module is permitted to issue HTTP requests
 directly.
 
@@ -9,7 +9,7 @@ this client (2026-09-22, api-version 2024-10-15):
   - GET /rest/orgs                                             (list, paginated)
   - GET /rest/orgs/{org}/projects                               (list, paginated;
         accepts target_id=<id> and tags=<key>:<value> filters -- the tags
-        filter resolves Open Risk #6, which flagged this as unconfirmed)
+        filter was confirmed to work)
   - GET /rest/orgs/{org}/projects/{project}                     (get)
   - GET /rest/orgs/{org}/projects/{project}/sbom                 (get; ?format=
         is required -- confirmed the literal "+" in a value like
@@ -24,8 +24,7 @@ this client (2026-09-22, api-version 2024-10-15):
   - GET /rest/orgs/{org}/inventory/assets/{asset}                (get)
   - GET /rest/orgs/{org}/inventory/assets/{asset}/relationships/projects
                                                                   (list, paginated)
-The asset endpoints resolve Open Risk #1, which could not confirm a
-stable endpoint at spec-writing time -- they are not yet documented as
+The asset endpoints are not yet documented as
 GA at https://apidocs.snyk.io as of this writing, so re-verify before
 relying on them long-term.
 
@@ -34,13 +33,12 @@ relying on them long-term.
   - GET /v1/org/{org}/project/{project}/ignores                  (get; legacy
         v1 API, not JSON:API -- no envelope, no ?version=)
 Confirmed against the live OpenAPI spec at
-https://api.snyk.io/rest/openapi/{api-version} while building FR-9
-(Open Risk #2): the REST issues endpoint's `attributes.ignored` is only
+https://api.snyk.io/rest/openapi/{api-version} while building issue/ignore support: the REST issues endpoint's `attributes.ignored` is only
 a boolean, and its `relationships.ignore` is an opaque
 {id, type: "ignore"} reference with no path in this API version to
 fetch the ignore's actual reason/justification/expiry. That detail is
 only available from the legacy v1 ignores endpoint, keyed by issue ID,
-in the reasonType/reason/expires shape FR-3's mapping table is written
+in the reasonType/reason/expires shape the justification mapping is written
 against -- so issues and ignore reasons are deliberately read from two
 different API generations.
 
@@ -135,7 +133,7 @@ class SnykClient:
         """GETs one URL and returns the raw response body, or None on HTTP 404.
 
         Shared by every other GET method here (JSON:API and legacy v1
-        alike) so retry/backoff (FR-15) and error mapping live in one
+        alike) so retry/backoff and error mapping live in one
         place. `error_path` is only used for error messages -- it need
         not match `url` exactly (e.g. it can be the unversioned path).
         """
@@ -265,7 +263,7 @@ class SnykClient:
         return self._get_resource(f"/rest/orgs/{org_id}/projects/{project_id}")
 
     def get_project_sbom(self, org_id: str, project_id: str, sbom_format: str) -> Optional[bytes]:
-        """Fetches one project's SBOM document (FR-7).
+        """Fetches one project's SBOM document.
 
         Returns the raw response bytes -- the document is CycloneDX or
         SPDX, not a JSON:API resource, and may be XML rather than JSON
@@ -285,7 +283,7 @@ class SnykClient:
     def get_target(self, org_id: str, target_id: str) -> Optional[Dict[str, Any]]:
         return self._get_resource(f"/rest/orgs/{org_id}/targets/{target_id}")
 
-    # -- assets (Open Risk #1) -----------------------------------------------
+    # -- assets -----------------------------------------------
 
     def get_asset(self, org_id: str, asset_id: str) -> Optional[Dict[str, Any]]:
         return self._get_resource(f"/rest/orgs/{org_id}/inventory/assets/{asset_id}")
@@ -293,15 +291,15 @@ class SnykClient:
     def list_asset_projects(self, org_id: str, asset_id: str) -> Optional[List[Dict[str, Any]]]:
         return self._paginate(f"/rest/orgs/{org_id}/inventory/assets/{asset_id}/relationships/projects")
 
-    # -- issues / ignores (FR-9) ---------------------------------------------
+    # -- issues / ignores ---------------------------------------------
 
     def list_project_issues(self, org_id: str, project_id: str) -> List[Dict[str, Any]]:
-        """A project's current issues (FR-9). Never 404s for a project that exists."""
+        """A project's current issues. Never 404s for a project that exists."""
         params = {"scan_item.id": project_id, "scan_item.type": "project"}
         return self._paginate(f"/rest/orgs/{org_id}/issues", params) or []
 
     def get_project_ignores(self, org_id: str, project_id: str) -> Dict[str, Any]:
-        """A project's ignore reasons, keyed by issue ID (FR-9, Open Risk #2).
+        """A project's ignore reasons, keyed by issue ID.
 
         Legacy v1 API: {issue_id: [{path_or_"*": {reason, reasonType,
         expires, created, ignoredBy, ...}}, ...]}. Returns {} both when

@@ -207,7 +207,7 @@ class DeriveVexTests(unittest.TestCase):
         self.assertEqual(result.document["serialNumber"], merge_result.document["serialNumber"])
 
     def test_dedups_same_vulnerability_across_project_occurrences_via_affects_array(self):
-        # FR-9a: the same underlying vulnerability (by CVE) surfaces as a
+        # The same underlying vulnerability (by CVE) surfaces as a
         # distinct per-project issue ID in each project -- it must still
         # collapse to one vulnerability entry listing every occurrence.
         fetch_results, merge_result = build_merge_multi(
@@ -235,7 +235,7 @@ class DeriveVexTests(unittest.TestCase):
     def test_conflicting_states_resolve_to_least_suppressed_and_are_flagged(self):
         # Open/unignored in one project, ignored (not-vulnerable) in another:
         # the least-suppressed state (exploitable) must win, and the
-        # conflict must be reported (FR-9a).
+        # conflict must be reported.
         fetch_results, merge_result = build_merge_multi(
             [
                 ("org-1", "p1", "shared", "1.0", "pkg:maven/shared@1.0"),

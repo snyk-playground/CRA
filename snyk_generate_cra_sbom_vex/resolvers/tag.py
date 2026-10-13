@@ -1,6 +1,6 @@
-"""Resolves --tag KEY=VALUE across every org the token can access (FR-2a).
+"""Resolves --tag KEY=VALUE across every org the token can access.
 
-A tag isn't scoped to one org (Open Risk #6), so this queries every
+A tag isn't scoped to one org so this queries every
 accessible org's project listing with the tags filter. Confirmed
 against a live tenant while building this resolver (2026-09-22): GET
 /rest/orgs/{org}/projects accepts a `tags=key:value` query filter

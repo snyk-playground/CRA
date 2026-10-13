@@ -70,7 +70,7 @@ def render_merge_summary(result: MergeResult) -> str:
         return f"Merge skipped: {result.skipped_reason}"
     return (
         f"Aggregated {result.component_count} component occurrence(s) across all fetched "
-        f"SBOMs (no de-duplication -- every occurrence is kept per FR-8), "
+        f"SBOMs (no de-duplication -- every occurrence is kept), "
         f"{result.dependency_count} dependency edge(s). "
         f"serialNumber={result.document['serialNumber']}"
     )
@@ -81,15 +81,15 @@ def render_vex_summary(result: VexBuildResult) -> str:
         return f"VEX skipped: {result.skipped_reason}"
     warnings = []
     if result.needs_manual_justification:
-        warnings.append(f"{result.needs_manual_justification} need manual justification (FR-4)")
+        warnings.append(f"{result.needs_manual_justification} need manual justification")
     if result.unmatched_count:
         warnings.append(f"{result.unmatched_count} could not be matched to an aggregate SBOM component")
     if result.conflicting_state_count:
         warnings.append(
-            f"{result.conflicting_state_count} had conflicting per-occurrence states collapsed (FR-9a)"
+            f"{result.conflicting_state_count} had conflicting per-occurrence states collapsed"
         )
     suffix = f" ({'; '.join(warnings)})" if warnings else ""
-    return f"Derived {result.vulnerability_count} unique VEX entry(ies) (de-duplicated across occurrences, FR-9a){suffix}."
+    return f"Derived {result.vulnerability_count} unique VEX entry(ies) (de-duplicated across occurrences){suffix}."
 
 
 def render_write_summary(result: WriteResult) -> str:

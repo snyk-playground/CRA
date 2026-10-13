@@ -39,7 +39,7 @@ class MergeSbomsTests(unittest.TestCase):
         merged = sbom.merge_sboms(results, "cyclonedx1.6+json")
 
         self.assertIsNone(merged.skipped_reason)
-        # 2 root components (pkg:app/a, pkg:app/b) + 2 separate "shared" occurrences (FR-8: not collapsed)
+        # 2 root components (pkg:app/a, pkg:app/b) + 2 separate "shared" occurrences (not collapsed)
         self.assertEqual(merged.component_count, 4)
 
         shared_occurrences = [c for c in merged.document["components"] if c["purl"] == "pkg:maven/shared@1.0"]
@@ -51,7 +51,7 @@ class MergeSbomsTests(unittest.TestCase):
             if p["name"] == "snyk:sourceProjectId"
         }
         self.assertEqual(source_ids, {"org-1/p1", "org-1/p2"})
-        # Each occurrence gets its own unique bom-ref (FR-8).
+        # Each occurrence gets its own unique bom-ref.
         refs = {c["bom-ref"] for c in shared_occurrences}
         self.assertEqual(len(refs), 2)
 
