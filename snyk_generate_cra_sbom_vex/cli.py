@@ -147,7 +147,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-prefix",
         default=None,
         metavar="PREFIX",
-        help="Path/prefix for the two output files (default: sbom/vex in the current working directory).",
+        help=(
+            "Path and filename stem for the output file(s); missing directories are created. "
+            "CycloneDX writes one combined file, <PREFIX>.cdx.json (default: sbom.cdx.json). "
+            "SPDX writes <PREFIX>.sbom.spdx.json and <PREFIX>.vex.cdx.json "
+            "(default: sbom.spdx.json and vex.cdx.json). Default location is the current directory."
+        ),
     )
     output.add_argument(
         "--no-vex",
