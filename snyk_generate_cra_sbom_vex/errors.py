@@ -42,3 +42,9 @@ class ProjectFetchError(SnykCraSbomVexError):
     """A single project's SBOM/issues fetch failed and --fail-fast is set (FR-14)."""
 
     exit_code = 6
+
+
+class OutputWriteError(SnykCraSbomVexError):
+    """An output file (or its parent directory) could not be written."""
+
+    exit_code = 7

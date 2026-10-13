@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .errors import OutputWriteError
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_SBOM_BASENAME = "sbom"
@@ -82,7 +84,11 @@ def _single_file_path(output_prefix: Optional[str], extension: str) -> Path:
 
 
 def _write_json(path: Path, document: Dict[str, Any]) -> None:
-    path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        raise OutputWriteError(f"could not write {path}: {exc}") from exc
 
 
 def write_outputs(

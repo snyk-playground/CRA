@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from snyk_generate_cra_sbom_vex import writers
+from snyk_generate_cra_sbom_vex.errors import OutputWriteError
 
 
 class WriteOutputsTests(unittest.TestCase):
@@ -15,6 +16,26 @@ class WriteOutputsTests(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self._cwd)
+
+    # -- output directory handling ---------------------------------------------
+
+    def test_creates_missing_parent_directories_for_cyclonedx(self):
+        result = writers.write_outputs(
+            {"bomFormat": "CycloneDX"}, None, "cyclonedx1.6+json", output_prefix="out/nested/run1"
+        )
+        self.assertEqual(result.sbom_path, Path("out/nested/run1.cdx.json"))
+        self.assertTrue(Path("out/nested/run1.cdx.json").is_file())
+
+    def test_creates_missing_parent_directories_for_spdx_pair(self):
+        writers.write_outputs({"spdxVersion": "SPDX-2.3"}, {"vulnerabilities": []}, "spdx2.3+json", "a/b/run1")
+        self.assertTrue(Path("a/b/run1.sbom.spdx.json").is_file())
+        self.assertTrue(Path("a/b/run1.vex.cdx.json").is_file())
+
+    def test_unwritable_location_raises_output_write_error(self):
+        Path("blocker").write_text("a file, not a directory")
+        with self.assertRaises(OutputWriteError) as ctx:
+            writers.write_outputs({"bomFormat": "CycloneDX"}, None, "cyclonedx1.6+json", "blocker/run1")
+        self.assertIn("blocker", str(ctx.exception))
 
     # -- CycloneDX: one merged file (FR-10) ----------------------------------
 

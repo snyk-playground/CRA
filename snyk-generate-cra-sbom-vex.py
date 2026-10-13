@@ -111,9 +111,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.warning(vex_result.skipped_reason)
     print(reporting.render_vex_summary(vex_result), flush=True)
 
-    write_result = writers.write_outputs(
-        merge_result.document, vex_result.document, run_config.sbom_format, run_config.output_prefix
-    )
+    try:
+        write_result = writers.write_outputs(
+            merge_result.document, vex_result.document, run_config.sbom_format, run_config.output_prefix
+        )
+    except SnykCraSbomVexError as exc:
+        logger.error(str(exc))
+        return exc.exit_code
     print(reporting.render_write_summary(write_result), flush=True)
 
     return 1 if fail_count else 0

@@ -111,8 +111,9 @@ python3 -m unittest discover -s tests -t .
 
 ## Production considerations
 
-This script is intended for production use, but be aware of the following
-before relying on it as your sole source of CRA compliance evidence:
+This script is primarily for educational and demonstration purposes. Use it
+with caution in production environments, and be aware of the following before
+relying on it as a source of CRA compliance evidence:
 
 - Aggregation and VEX derivation only support the default CycloneDX+JSON
   format (see the limitation noted above).
@@ -136,10 +137,11 @@ before relying on it as your sole source of CRA compliance evidence:
 
 ## Disclaimer
 
-This script is intended for production use. It is provided "as is," without
-warranty of any kind, express or implied, including but not limited to
-fitness for a particular purpose. The author assumes no responsibility or
-liability for any damage, data loss, compliance outcome, or other
+This script is primarily intended for educational and demonstration purposes.
+Use it with caution in production environments. It is provided "as is,"
+without warranty of any kind, express or implied, including but not limited to
+fitness for a particular purpose. The author cannot be held responsible for
+any unintended outcomes, and assumes no responsibility or liability for any damage, data loss, compliance outcome, or other
 consequences resulting from its use — including from the Snyk API calls it
 makes, the accuracy or completeness of the generated SBOM/VEX documents, or
 any action taken based on their contents. Review the generated output and
