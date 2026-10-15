@@ -128,8 +128,12 @@ def issue(
     package_version: str,
     issue_type: str = "package_vulnerability",
     cve: Optional[str] = None,
+    extra: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Builds an issue resource shaped like the real REST API's."""
+    """Builds an issue resource shaped like the real REST API's.
+
+    `extra` is merged into `attributes` for tests of the descriptive fields.
+    """
     problems = [{"id": key, "source": "SNYK", "type": "vulnerability"}]
     if cve:
         problems.insert(0, {"id": cve, "source": "NVD", "type": "vulnerability"})
@@ -143,6 +147,7 @@ def issue(
             "coordinates": [
                 {"representations": [{"dependency": {"package_name": package_name, "package_version": package_version}}]}
             ],
+            **(extra or {}),
         },
     }
 

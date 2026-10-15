@@ -275,5 +275,69 @@ class DeriveVexTests(unittest.TestCase):
         self.assertEqual(result.conflicting_state_count, 0)
 
 
+class DescriptiveFieldsTests(unittest.TestCase):
+    EXTRA = {
+        "title": "Deserialization of Untrusted Data",
+        "description": "Long description.",
+        "severities": [
+            {"source": "Snyk", "level": "critical", "score": 9.8, "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"},
+            {"source": "NVD", "level": "weird", "score": 7.5, "vector": "AV:N/AC:L/Au:N/C:P/I:P/A:P"},
+        ],
+        "classes": [{"id": "CWE-502", "type": "weakness"}, {"id": "other", "type": "x"}],
+        "coordinates": [
+            {
+                "created_at": "2024-02-01T00:00:00Z",
+                "updated_at": "2024-03-01T00:00:00Z",
+                "reachability": "reachable",
+                "remedies": [{"description": "Upgrade to 1.4.6", "type": "indeterminate"}],
+                "representations": [{"dependency": {"package_name": "shared", "package_version": "1.0"}}],
+            }
+        ],
+        "exploit_details": {"maturity_levels": [{"format": "CVSSv3", "level": "proof of concept"}]},
+    }
+
+    def _vuln(self, extra, cve="CVE-2020-0001"):
+        fetch_result, merge_result = build_merge("org-1", "p1", "shared", "1.0", "pkg:maven/shared@1.0")
+        client = FakeSnykClient(project_issues={("org-1", "p1"): [issue("i1", "SNYK-1", "shared", "1.0", cve=cve, extra=extra)]})
+        return vex.derive_vex(client, [fetch_result], merge_result, generate_vex=True).document["vulnerabilities"][0]
+
+    def test_emits_descriptive_fields(self):
+        v = self._vuln(self.EXTRA)
+        self.assertEqual(v["source"], {"name": "NVD", "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-0001"})
+        self.assertEqual(v["description"], "Deserialization of Untrusted Data")
+        self.assertEqual(v["detail"], "Long description.")
+        self.assertEqual(v["cwes"], [502])
+        self.assertEqual(v["recommendation"], "Upgrade to 1.4.6")
+        self.assertEqual(
+            [a["url"] for a in v["advisories"]],
+            ["https://nvd.nist.gov/vuln/detail/CVE-2020-0001", "https://security.snyk.io/vuln/SNYK-1"],
+        )
+        self.assertEqual(v["analysis"]["firstIssued"], "2024-02-01T00:00:00Z")
+        self.assertEqual(v["analysis"]["lastUpdated"], "2024-03-01T00:00:00Z")
+        props = {p["name"]: p["value"] for p in v["properties"]}
+        self.assertEqual(props["snyk:exploitMaturity"], "proof of concept")
+        self.assertEqual(props["snyk:reachability"], "reachable")
+
+    def test_ratings_map_method_and_unknown_severity(self):
+        r = self._vuln(self.EXTRA)["ratings"]
+        self.assertEqual(r[0], {"source": {"name": "Snyk"}, "score": 9.8, "severity": "critical",
+                                "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "method": "CVSSv31"})
+        self.assertEqual((r[1]["severity"], r[1]["method"]), ("unknown", "CVSSv2"))
+
+    def test_dates_from_problem(self):
+        extra = {"problems": [{"id": "CVE-2020-0001", "source": "NVD", "type": "vulnerability",
+                               "disclosed_at": "2020-01-01T00:00:00Z", "discovered_at": "2019-12-01T00:00:00Z",
+                               "updated_at": "2020-02-01T00:00:00Z"}]}
+        v = self._vuln(extra)
+        self.assertEqual((v["published"], v["created"], v["updated"]),
+                         ("2020-01-01T00:00:00Z", "2019-12-01T00:00:00Z", "2020-02-01T00:00:00Z"))
+
+    def test_absent_data_adds_no_keys(self):
+        v = self._vuln(None)
+        for key in ("ratings", "cwes", "description", "detail", "recommendation", "published"):
+            self.assertNotIn(key, v)
+        self.assertEqual(v["analysis"], {"state": "exploitable"})
+
+
 if __name__ == "__main__":
     unittest.main()

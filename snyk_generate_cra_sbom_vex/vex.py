@@ -92,6 +92,10 @@ class _Occurrence:
     analysis: Dict[str, Any]
     org_id: str
     project_id: str
+    details: Dict[str, Any]  # descriptive vulnerability fields, see _build_details
+    first_issued: Optional[str] = None
+    last_updated: Optional[str] = None
+    properties: Tuple[Dict[str, str], ...] = ()
 
 
 def _normalize_justification_code(reason_text: str) -> Optional[str]:
@@ -119,6 +123,135 @@ def _preferred_vuln_id(issue_attrs: Dict[str, Any]) -> str:
         if problem.get("source") == "NVD" and str(problem.get("id", "")).startswith("CVE-"):
             return problem["id"]
     return issue_attrs.get("key") or ""
+
+
+_SEVERITY_LEVELS = {"info", "low", "medium", "high", "critical"}
+_CWE_RE = re.compile(r"^CWE-(\d+)$", re.IGNORECASE)
+_SNYK_VULN_URL = "https://security.snyk.io/vuln/"
+_NVD_VULN_URL = "https://nvd.nist.gov/vuln/detail/"
+
+
+def _rating_method(vector: Optional[str]) -> str:
+    """Maps a CVSS vector string to CycloneDX's `ratings[].method` vocabulary."""
+    if vector:
+        if vector.startswith("CVSS:4.0"):
+            return "CVSSv4"
+        if vector.startswith("CVSS:3.1"):
+            return "CVSSv31"
+        if vector.startswith("CVSS:3.0"):
+            return "CVSSv3"
+        if vector.startswith("AV:"):
+            return "CVSSv2"
+    return "other"
+
+
+def _problem_url(problem: Dict[str, Any]) -> Optional[str]:
+    if problem.get("url"):
+        return problem["url"]
+    problem_id = str(problem.get("id") or "")
+    if not problem_id:
+        return None
+    if problem.get("source") == "NVD" and problem_id.startswith("CVE-"):
+        return _NVD_VULN_URL + problem_id
+    if str(problem.get("source", "")).upper() == "SNYK":
+        return _SNYK_VULN_URL + problem_id
+    return None
+
+
+def _build_ratings(issue_attrs: Dict[str, Any]) -> List[Dict[str, Any]]:
+    ratings: List[Dict[str, Any]] = []
+    for severity in issue_attrs.get("severities") or []:
+        rating: Dict[str, Any] = {}
+        if severity.get("source"):
+            rating["source"] = {"name": str(severity["source"])}
+        if isinstance(severity.get("score"), (int, float)):
+            rating["score"] = severity["score"]
+        level = str(severity.get("level", "")).lower()
+        rating["severity"] = level if level in _SEVERITY_LEVELS else "unknown"
+        if severity.get("vector"):
+            rating["vector"] = severity["vector"]
+        rating["method"] = _rating_method(severity.get("vector"))
+        ratings.append(rating)
+    return ratings
+
+
+def _build_details(issue_attrs: Dict[str, Any]) -> Dict[str, Any]:
+    """Descriptive VEX fields (source, ratings, text, dates, advisories, fix
+    guidance) taken verbatim from the REST issue; only keys with data are set."""
+    details: Dict[str, Any] = {}
+    problems = [p for p in issue_attrs.get("problems") or [] if p.get("type", "vulnerability") == "vulnerability"]
+    preferred_id = _preferred_vuln_id(issue_attrs)
+    primary = next((p for p in problems if p.get("id") == preferred_id), problems[0] if problems else None)
+
+    if primary:
+        source: Dict[str, Any] = {}
+        if primary.get("source"):
+            source["name"] = str(primary["source"])
+        url = _problem_url(primary)
+        if url:
+            source["url"] = url
+        if source:
+            details["source"] = source
+        for key, field in (("disclosed_at", "published"), ("discovered_at", "created"), ("updated_at", "updated")):
+            if primary.get(key):
+                details[field] = primary[key]
+
+    ratings = _build_ratings(issue_attrs)
+    if ratings:
+        details["ratings"] = ratings
+
+    title, description = issue_attrs.get("title"), issue_attrs.get("description")
+    if title:
+        details["description"] = title
+    if description:
+        details["detail"] = description
+
+    advisories, seen = [], set()
+    for problem in problems:
+        url = _problem_url(problem)
+        if url and url not in seen:
+            seen.add(url)
+            advisories.append({"title": str(problem.get("id") or url), "url": url})
+    if advisories:
+        details["advisories"] = advisories
+
+    cwes: List[int] = []
+    for cls in issue_attrs.get("classes") or []:
+        match = _CWE_RE.match(str(cls.get("id", "")))
+        if match and int(match.group(1)) not in cwes:
+            cwes.append(int(match.group(1)))
+    if cwes:
+        details["cwes"] = cwes
+
+    remedies: List[str] = []
+    for coordinate in issue_attrs.get("coordinates") or []:
+        for remedy in coordinate.get("remedies") or []:
+            text = (remedy.get("description") or "").strip()
+            if text and text not in remedies:
+                remedies.append(text)
+    if remedies:
+        details["recommendation"] = " ".join(remedies)
+    return details
+
+
+def _build_extra_properties(issue_attrs: Dict[str, Any]) -> Tuple[Dict[str, str], ...]:
+    props: List[Dict[str, str]] = []
+    maturity = (issue_attrs.get("exploit_details") or {}).get("maturity_levels") or []
+    levels = [m["level"] for m in maturity if m.get("level")]
+    if levels:
+        props.append({"name": "snyk:exploitMaturity", "value": ", ".join(dict.fromkeys(levels))})
+    reachability = {c["reachability"] for c in issue_attrs.get("coordinates") or [] if c.get("reachability")}
+    if reachability:
+        props.append({"name": "snyk:reachability", "value": ", ".join(sorted(reachability))})
+    return tuple(props)
+
+
+def _coordinate_dates(issue_attrs: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+    coordinates = issue_attrs.get("coordinates") or []
+    return (
+        [c["created_at"] for c in coordinates if c.get("created_at")],
+        [c["updated_at"] for c in coordinates if c.get("updated_at")],
+    )
 
 
 def _build_analysis(ignore_details: Optional[Dict[str, Any]]) -> Tuple[Dict[str, Any], bool]:
@@ -275,6 +408,9 @@ def derive_vex(
                     )
 
                 vuln_id = _preferred_vuln_id(attrs)
+                details = _build_details(attrs)
+                created, updated = _coordinate_dates(attrs)
+                extra_properties = _build_extra_properties(attrs)
                 for component_ref in component_refs:
                     occurrences_by_vuln[vuln_id].append(
                         _Occurrence(
@@ -282,6 +418,10 @@ def derive_vex(
                             analysis=analysis,
                             org_id=project.org_id,
                             project_id=project.project_id,
+                            details=details,
+                            first_issued=min(created, default=None),
+                            last_updated=max(updated, default=None),
+                            properties=extra_properties,
                         )
                     )
 
@@ -303,17 +443,29 @@ def derive_vex(
                 vuln_id,
                 len(occurrences),
             )
-        winning_analysis = min(occurrences, key=lambda o: _suppression_rank(o.analysis)).analysis
+        winning_analysis = dict(min(occurrences, key=lambda o: _suppression_rank(o.analysis)).analysis)
+        # Timestamps span every occurrence: earliest first-seen, latest update.
+        first_issued = min((o.first_issued for o in occurrences if o.first_issued), default=None)
+        last_updated = max((o.last_updated for o in occurrences if o.last_updated), default=None)
+        if first_issued:
+            winning_analysis["firstIssued"] = first_issued
+        if last_updated:
+            winning_analysis["lastUpdated"] = last_updated
 
-        vulnerabilities.append(
-            {
-                "bom-ref": f"vuln-{vuln_id}",
-                "id": vuln_id,
-                "affects": [{"ref": ref} for ref in affects],
-                "analysis": winning_analysis,
-                "properties": [{"name": "snyk:occurrenceCount", "value": str(len(affects))}],
-            }
-        )
+        # The same vulnerability yields the same descriptive data in every
+        # project; take the first occurrence that has any.
+        details = next((o.details for o in occurrences if o.details), {})
+        properties = [{"name": "snyk:occurrenceCount", "value": str(len(affects))}]
+        properties.extend(next((list(o.properties) for o in occurrences if o.properties), []))
+
+        entry: Dict[str, Any] = {"bom-ref": f"vuln-{vuln_id}", "id": vuln_id}
+        for key in ("source", "ratings", "cwes", "description", "detail", "recommendation", "advisories", "created", "published", "updated"):
+            if key in details:
+                entry[key] = details[key]
+        entry["analysis"] = winning_analysis
+        entry["affects"] = [{"ref": ref} for ref in affects]
+        entry["properties"] = properties
+        vulnerabilities.append(entry)
 
     document = {
         "bomFormat": "CycloneDX",

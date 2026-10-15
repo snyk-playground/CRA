@@ -100,6 +100,12 @@ For the resolved, de-duplicated set of projects:
    count. If the ignore/triage state differs across occurrences, the
    least-suppressed state wins (open/unignored beats any ignored state) and
    the run summary reports the conflict.
+   Each vulnerability also carries the descriptive data the Snyk issues API
+   returns: `source`, CVSS `ratings`, `cwes`, `description`/`detail`,
+   `created`/`published`/`updated` dates, `advisories`, a `recommendation`
+   built from Snyk's remedy text, `analysis.firstIssued`/`lastUpdated`, and
+   `snyk:exploitMaturity`/`snyk:reachability` properties. Fields Snyk doesn't
+   report for an issue are omitted, never invented.
 4. Writes the output. Where VEX content lands depends on the SBOM format:
    - **CycloneDX** (the default): SBOM and VEX are written to a single file,
      e.g. `sbom.cdx.json` -- VEX is embedded directly in the aggregate SBOM
