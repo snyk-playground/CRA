@@ -225,8 +225,21 @@ def _build_details(issue_attrs: Dict[str, Any]) -> Dict[str, Any]:
 
     remedies: List[str] = []
     for coordinate in issue_attrs.get("coordinates") or []:
+        package = next(
+            (
+                (r.get("dependency") or {}).get("package_name")
+                for r in coordinate.get("representations") or []
+                if (r.get("dependency") or {}).get("package_name")
+            ),
+            None,
+        )
         for remedy in coordinate.get("remedies") or []:
+            # The REST API gives structured fixed versions (meta.data.fixed_in),
+            # and only sometimes a free-text description.
+            fixed_in = [str(v) for v in ((remedy.get("meta") or {}).get("data") or {}).get("fixed_in") or []]
             text = (remedy.get("description") or "").strip()
+            if fixed_in:
+                text = f"Upgrade {package or 'the affected package'} to {' or '.join(fixed_in)}."
             if text and text not in remedies:
                 remedies.append(text)
     if remedies:

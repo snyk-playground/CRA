@@ -332,6 +332,20 @@ class DescriptiveFieldsTests(unittest.TestCase):
         self.assertEqual((v["published"], v["created"], v["updated"]),
                          ("2020-01-01T00:00:00Z", "2019-12-01T00:00:00Z", "2020-02-01T00:00:00Z"))
 
+    def test_recommendation_built_from_fixed_in_versions(self):
+        extra = {"coordinates": [{
+            "remedies": [{"type": "indeterminate", "meta": {"data": {"fixed_in": ["1.4.7", "1.4.11"]}}}],
+            "representations": [{"dependency": {"package_name": "shared", "package_version": "1.0"}}],
+        }]}
+        self.assertEqual(self._vuln(extra)["recommendation"], "Upgrade shared to 1.4.7 or 1.4.11.")
+
+    def test_recommendation_without_fixed_in_uses_description_or_is_absent(self):
+        coord = {"representations": [{"dependency": {"package_name": "shared", "package_version": "1.0"}}]}
+        with_text = {"coordinates": [{**coord, "remedies": [{"description": "Apply patch X"}]}]}
+        self.assertEqual(self._vuln(with_text)["recommendation"], "Apply patch X")
+        no_fix = {"coordinates": [{**coord, "remedies": [{"type": "indeterminate", "meta": {"data": {}}}]}]}
+        self.assertNotIn("recommendation", self._vuln(no_fix))
+
     def test_absent_data_adds_no_keys(self):
         v = self._vuln(None)
         for key in ("ratings", "cwes", "description", "detail", "recommendation", "published"):

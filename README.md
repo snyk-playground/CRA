@@ -103,7 +103,7 @@ For the resolved, de-duplicated set of projects:
    Each vulnerability also carries the descriptive data the Snyk issues API
    returns: `source`, CVSS `ratings`, `cwes`, `description`/`detail`,
    `created`/`published`/`updated` dates, `advisories`, a `recommendation`
-   built from Snyk's remedy text, `analysis.firstIssued`/`lastUpdated`, and
+   built from Snyk's fixed-in versions, `analysis.firstIssued`/`lastUpdated`, and
    `snyk:exploitMaturity`/`snyk:reachability` properties. Fields Snyk doesn't
    report for an issue are omitted, never invented.
 4. Writes the output. Where VEX content lands depends on the SBOM format:
