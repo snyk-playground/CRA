@@ -44,6 +44,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     # line has it redacted.
     logger = logging_setup.configure(debug=run_config.debug, redact=[run_config.token])
 
+    missing_cra = run_config.product.missing_cra_fields()
+    if missing_cra:
+        logger.warning(
+            "The SBOM will lack CRA-required identity data: %s. Pass the flags "
+            "(or CRA_* environment variables), or use --cra-strict to enforce them.",
+            "; ".join(missing_cra),
+        )
+
     if run_config.vex_skip_reason:
         logger.warning(run_config.vex_skip_reason)
 
@@ -101,7 +109,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     print(reporting.render_sbom_fetch_table(fetch_results), flush=True)
 
-    merge_result = sbom.merge_sboms(fetch_results, run_config.sbom_format)
+    merge_result = sbom.merge_sboms(fetch_results, run_config.sbom_format, run_config.product)
     if merge_result.skipped_reason:
         logger.warning(merge_result.skipped_reason)
     print(reporting.render_merge_summary(merge_result), flush=True)

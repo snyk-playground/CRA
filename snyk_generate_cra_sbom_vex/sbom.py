@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from .config import ProductMetadata
 from .progress import Progress
 from .errors import ProjectFetchError, SnykCraSbomVexError
 from .resolvers.base import ResolvedProject
@@ -176,7 +177,51 @@ def _component_identity(component: Dict[str, Any]) -> str:
     return "no-purl:" + "|".join(parts)
 
 
-def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> MergeResult:
+def build_identity_metadata(product: ProductMetadata, spec_version: str) -> Dict[str, Any]:
+    """Builds the manufacturer / authors / component entries for `metadata`.
+
+    CycloneDX 1.6 calls the manufacturer field `manufacturer`; earlier specs
+    use `manufacture`. Only fields the operator supplied are emitted.
+    """
+    out: Dict[str, Any] = {}
+
+    if product.manufacturer_name or product.manufacturer_url or product.manufacturer_email:
+        manufacturer: Dict[str, Any] = {}
+        if product.manufacturer_name:
+            manufacturer["name"] = product.manufacturer_name
+        if product.manufacturer_url:
+            manufacturer["url"] = [product.manufacturer_url]
+        if product.manufacturer_email:
+            manufacturer["contact"] = [
+                {k: v for k, v in (("name", product.manufacturer_name), ("email", product.manufacturer_email)) if v}
+            ]
+        key = "manufacturer" if tuple(int(x) for x in spec_version.split(".")) >= (1, 6) else "manufacture"
+        out[key] = manufacturer
+
+    if product.author_name or product.author_email:
+        author = {
+            k: v for k, v in (("name", product.author_name), ("email", product.author_email)) if v
+        }
+        out["authors"] = [author]
+
+    if product.product_name:
+        component: Dict[str, Any] = {
+            "type": "application",
+            "bom-ref": f"product:{product.product_name}",
+            "name": product.product_name,
+        }
+        if product.product_version:
+            component["version"] = product.product_version
+        out["component"] = component
+
+    return out
+
+
+def merge_sboms(
+    fetch_results: List[SbomFetchResult],
+    sbom_format: str,
+    product: Optional[ProductMetadata] = None,
+) -> MergeResult:
     """Aggregates every successfully fetched SBOM into one CycloneDX document.
 
     Components are *not* de-duplicated: every occurrence from
@@ -274,6 +319,7 @@ def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> Merge
     ]
 
     spec_version = format_match.group("spec_version")
+    identity = build_identity_metadata(product, spec_version) if product else {}
     document = {
         "$schema": f"http://cyclonedx.org/schema/bom-{spec_version}.schema.json",
         "bomFormat": "CycloneDX",
@@ -288,6 +334,7 @@ def merge_sboms(fetch_results: List[SbomFetchResult], sbom_format: str) -> Merge
         "metadata": {
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "tools": {"services": [{"provider": {"name": "Snyk"}, "name": TOOL_NAME, "version": TOOL_VERSION}]},
+            **identity,
         },
         "components": components,
         "dependencies": dependencies,

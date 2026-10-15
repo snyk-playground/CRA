@@ -165,3 +165,42 @@ class MergeSbomsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IdentityMetadataTests(unittest.TestCase):
+    def _merge(self, product, fmt="cyclonedx1.6+json"):
+        doc = {"components": [{"bom-ref": "1", "purl": "pkg:maven/x@1", "name": "x"}]}
+        return sbom.merge_sboms([fetch_ok("o", "p", doc)], fmt, product).document["metadata"]
+
+    def test_no_product_adds_nothing(self):
+        md = self._merge(None)
+        for key in ("manufacturer", "manufacture", "authors", "component"):
+            self.assertNotIn(key, md)
+
+    def test_full_identity_cyclonedx_1_6(self):
+        from snyk_generate_cra_sbom_vex.config import ProductMetadata
+
+        md = self._merge(
+            ProductMetadata(
+                manufacturer_name="Acme",
+                manufacturer_url="https://acme.example",
+                manufacturer_email="sec@acme.example",
+                author_name="Sec Team",
+                author_email="sbom@acme.example",
+                product_name="Widget",
+                product_version="2.0",
+            )
+        )
+        self.assertEqual(md["manufacturer"]["name"], "Acme")
+        self.assertEqual(md["manufacturer"]["url"], ["https://acme.example"])
+        self.assertEqual(md["manufacturer"]["contact"], [{"name": "Acme", "email": "sec@acme.example"}])
+        self.assertEqual(md["authors"], [{"name": "Sec Team", "email": "sbom@acme.example"}])
+        self.assertEqual(md["component"]["name"], "Widget")
+        self.assertEqual(md["component"]["version"], "2.0")
+
+    def test_older_spec_uses_manufacture_key(self):
+        from snyk_generate_cra_sbom_vex.config import ProductMetadata
+
+        md = self._merge(ProductMetadata(manufacturer_name="Acme"), "cyclonedx1.5+json")
+        self.assertIn("manufacture", md)
+        self.assertNotIn("manufacturer", md)

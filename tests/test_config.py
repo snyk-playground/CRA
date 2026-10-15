@@ -88,3 +88,45 @@ class BuildConfigTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProductMetadataTests(unittest.TestCase):
+    ENV = list(config.PRODUCT_ENV_VARS.values())
+
+    def setUp(self):
+        self._saved = {v: os.environ.pop(v, None) for v in self.ENV}
+
+    def tearDown(self):
+        for var, value in self._saved.items():
+            if value is not None:
+                os.environ[var] = value
+            else:
+                os.environ.pop(var, None)
+
+    def test_flags_and_env_fallback(self):
+        os.environ["CRA_MANUFACTURER_NAME"] = "EnvCo"
+        args = cli.parse_args(["--org", "A", "--token", "t", "--author-email", "a@b.example"])
+        product = config.build_config(args).product
+        self.assertEqual(product.manufacturer_name, "EnvCo")
+        self.assertEqual(product.author_email, "a@b.example")
+
+    def test_flag_beats_env(self):
+        os.environ["CRA_MANUFACTURER_NAME"] = "EnvCo"
+        args = cli.parse_args(["--org", "A", "--token", "t", "--manufacturer-name", "FlagCo"])
+        self.assertEqual(config.build_config(args).product.manufacturer_name, "FlagCo")
+
+    def test_missing_fields_not_fatal_by_default(self):
+        args = cli.parse_args(["--org", "A", "--token", "t"])
+        self.assertEqual(len(config.build_config(args).product.missing_cra_fields()), 3)
+
+    def test_strict_fails_when_missing(self):
+        args = cli.parse_args(["--org", "A", "--token", "t", "--cra-strict"])
+        with self.assertRaises(ConfigError):
+            config.build_config(args)
+
+    def test_strict_passes_when_complete(self):
+        args = cli.parse_args(
+            ["--org", "A", "--token", "t", "--cra-strict", "--manufacturer-name", "Acme",
+             "--author-email", "a@b.example", "--product-name", "W"]
+        )
+        self.assertTrue(config.build_config(args).cra_strict)

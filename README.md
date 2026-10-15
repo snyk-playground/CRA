@@ -71,6 +71,8 @@ reference. The most commonly used ones:
 | `--token` | Snyk API token (overrides `$SNYK_TOKEN`) |
 | `--sbom-format` | SBOM format (default `cyclonedx1.6+json`); see note below |
 | `--output-prefix` | Filename stem for the output file(s) (default: `sbom` in the current directory for CycloneDX, `sbom`/`vex` for SPDX -- see below) |
+| `--manufacturer-name`, `--manufacturer-url`, `--manufacturer-email`, `--author-name`, `--author-email`, `--product-name`, `--product-version` | Manufacturer, SBOM author and product identity written to `metadata` (CycloneDX only). Snyk can't supply these. Each falls back to a `CRA_*` environment variable (e.g. `CRA_MANUFACTURER_NAME`) |
+| `--cra-strict` | Fail before any API call if the manufacturer name, an SBOM creator contact, or the product name is missing (otherwise a warning is logged) |
 | `--no-vex` | Write the SBOM only, skip VEX generation |
 | `--fail-fast` | Abort on the first project-level failure instead of continuing |
 | `--debug` / `-v` | Verbose logging (HTTP requests, pagination, per-project status) |

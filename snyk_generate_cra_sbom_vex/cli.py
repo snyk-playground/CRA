@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 from typing import Optional, Sequence, Tuple
 
-from .config import API_VERSION_ENV_VAR, DEFAULT_API_VERSION
+from .config import API_VERSION_ENV_VAR, DEFAULT_API_VERSION, PRODUCT_ENV_VARS
 
 PROG_NAME = "snyk-generate-cra-sbom-vex"
 
@@ -158,6 +158,39 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-vex",
         action="store_true",
         help="Write the SBOM only; skip VEX generation.",
+    )
+
+    product = parser.add_argument_group(
+        "product and SBOM creator (CRA)",
+        "Snyk cannot determine who the manufacturer or SBOM author is, so supply "
+        "them here. Each flag falls back to the environment variable shown. They "
+        "populate metadata.manufacturer, metadata.authors and metadata.component "
+        "(CycloneDX output only).",
+    )
+    for dest, flag, text in (
+        ("manufacturer_name", "--manufacturer-name", "Legal name of the product's manufacturer."),
+        ("manufacturer_url", "--manufacturer-url", "Manufacturer website URL (valid SBOM creator contact)."),
+        ("manufacturer_email", "--manufacturer-email", "Manufacturer contact email."),
+        ("author_name", "--author-name", "Name of the person or team that authored the SBOM."),
+        ("author_email", "--author-email", "Email of the SBOM author (valid SBOM creator contact)."),
+        ("product_name", "--product-name", "Name of the product this SBOM describes (metadata.component)."),
+        ("product_version", "--product-version", "Version of the product this SBOM describes."),
+    ):
+        product.add_argument(
+            flag,
+            dest=dest,
+            default=None,
+            metavar="VALUE",
+            help=f"{text} Env: {PRODUCT_ENV_VARS[dest]}.",
+        )
+    product.add_argument(
+        "--cra-strict",
+        action="store_true",
+        help=(
+            "Exit with an error before any API calls if the manufacturer name, an "
+            "SBOM creator contact, or the product name is missing. Without it, "
+            "a warning is logged and the run continues."
+        ),
     )
 
     behavior = parser.add_argument_group("run behavior")
