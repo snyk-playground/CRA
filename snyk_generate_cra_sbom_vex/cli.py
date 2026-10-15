@@ -193,6 +193,19 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    enrichment = parser.add_argument_group("enrichment")
+    enrichment.add_argument(
+        "--enrich-maven",
+        action="store_true",
+        help=(
+            "Fill in what Snyk's SBOM omits for pkg:maven components, from Maven "
+            "Central: SHA-512 hash (computed from the downloaded jar), supplier "
+            "(POM organization), distribution/vcs URLs and filename. Downloads "
+            "each unique jar once, so it adds network traffic and run time "
+            "(CycloneDX output only)."
+        ),
+    )
+
     behavior = parser.add_argument_group("run behavior")
     behavior.add_argument(
         "--fail-fast",

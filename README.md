@@ -73,6 +73,7 @@ reference. The most commonly used ones:
 | `--output-prefix` | Filename stem for the output file(s) (default: `sbom` in the current directory for CycloneDX, `sbom`/`vex` for SPDX -- see below) |
 | `--manufacturer-name`, `--manufacturer-url`, `--manufacturer-email`, `--author-name`, `--author-email`, `--product-name`, `--product-version` | Manufacturer, SBOM author and product identity written to `metadata` (CycloneDX only). Snyk can't supply these. Each falls back to a `CRA_*` environment variable (e.g. `CRA_MANUFACTURER_NAME`) |
 | `--cra-strict` | Fail before any API call if the manufacturer name, an SBOM creator contact, or the product name is missing (otherwise a warning is logged) |
+| `--enrich-maven` | Fill in what Snyk's SBOM omits for `pkg:maven` components, from Maven Central: SHA-512 hash (computed from the downloaded jar), supplier (the POM's `organization`, via parent POMs), `distribution`/`vcs` URLs and a `bsi:component:filename` property. Each unique artifact is downloaded once, so it adds network traffic and run time. A supplier is never guessed: components whose POM has no organization are left without one |
 | `--no-vex` | Write the SBOM only, skip VEX generation |
 | `--fail-fast` | Abort on the first project-level failure instead of continuing |
 | `--debug` / `-v` | Verbose logging (HTTP requests, pagination, per-project status) |

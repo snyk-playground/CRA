@@ -115,6 +115,7 @@ class RunConfig:
     debug: bool
     product: ProductMetadata = ProductMetadata()
     cra_strict: bool = False
+    enrich_maven: bool = False
 
 
 def resolve_token(args: argparse.Namespace) -> str:
@@ -192,4 +193,5 @@ def build_config(args: argparse.Namespace) -> RunConfig:
         debug=args.debug,
         product=product,
         cra_strict=cra_strict,
+        enrich_maven=bool(getattr(args, "enrich_maven", False)),
     )

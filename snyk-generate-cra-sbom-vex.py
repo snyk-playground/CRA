@@ -21,7 +21,7 @@ from __future__ import annotations
 import sys
 from typing import List, Optional
 
-from snyk_generate_cra_sbom_vex import cli, config, discovery, logging_setup, reporting, sbom, vex, writers
+from snyk_generate_cra_sbom_vex import cli, config, discovery, enrich, logging_setup, reporting, sbom, vex, writers
 from snyk_generate_cra_sbom_vex.errors import SnykCraSbomVexError
 from snyk_generate_cra_sbom_vex.snyk_api.client import SnykClient
 
@@ -114,6 +114,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     if merge_result.skipped_reason:
         logger.warning(merge_result.skipped_reason)
     print(reporting.render_merge_summary(merge_result), flush=True)
+
+    if run_config.enrich_maven and merge_result.document is not None:
+        enrich_result = enrich.enrich_maven_components(merge_result.document, show_progress=True)
+        print(reporting.render_enrich_summary(enrich_result), flush=True)
 
     vex_result = vex.derive_vex(client, fetch_results, merge_result, run_config.generate_vex, show_progress=True)
     if vex_result.skipped_reason:

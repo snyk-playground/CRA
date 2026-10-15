@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import List, Sequence, Tuple
 
 from .resolvers.base import ResolvedProject
+from .enrich import EnrichResult
 from .sbom import MergeResult, SbomFetchResult
 from .vex import VexBuildResult
 from .writers import WriteResult
@@ -108,3 +109,11 @@ def render_write_summary(result: WriteResult) -> str:
 def render_banner(name: str, description: str) -> str:
     """Program name and description, each followed by a blank line."""
     return f"{name}\n\n{description}\n"
+
+
+def render_enrich_summary(result: "EnrichResult") -> str:
+    return (
+        f"Maven Central enrichment: {result.hashed}/{result.component_count} component(s) hashed, "
+        f"{result.supplier} given a supplier, across {result.unique_artifacts} unique artifact(s); "
+        f"{result.not_found} had no jar on Central, {result.skipped_non_maven} non-Maven component(s) skipped."
+    )
