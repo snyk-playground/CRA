@@ -44,15 +44,15 @@ def parse_tag(value: str) -> Tuple[str, str]:
     return key, val
 
 
+DESCRIPTION = (
+    "Aggregate Snyk Open Source and Container project SBOMs, and derive a "
+    "matching CycloneDX VEX document, across a combination of Snyk "
+    "organizations, targets, assets, projects, groups, and tags."
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog=PROG_NAME,
-        description=(
-            "Aggregate Snyk Open Source and Container project SBOMs, and derive a "
-            "matching CycloneDX VEX document, across a combination of Snyk "
-            "organizations, targets, assets, projects, groups, and tags."
-        ),
-    )
+    parser = argparse.ArgumentParser(prog=PROG_NAME, description=DESCRIPTION)
 
     sources = parser.add_argument_group(
         "source selection",

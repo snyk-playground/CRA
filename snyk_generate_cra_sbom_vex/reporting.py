@@ -103,3 +103,8 @@ def render_write_summary(result: WriteResult) -> str:
     else:
         vex_line = "VEX: (not written -- nothing to write)"
     return "\n".join([sbom_line, vex_line])
+
+
+def render_banner(name: str, description: str) -> str:
+    """Program name and description, each followed by a blank line."""
+    return f"{name}\n\n{description}\n"

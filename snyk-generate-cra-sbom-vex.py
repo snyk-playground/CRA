@@ -28,6 +28,7 @@ from snyk_generate_cra_sbom_vex.snyk_api.client import SnykClient
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = cli.parse_args(argv)
+    print(reporting.render_banner(cli.PROG_NAME, cli.DESCRIPTION), flush=True)
 
     # Configure logging before the token is known so any error raised
     # while resolving it is still reported (nothing sensitive can reach
