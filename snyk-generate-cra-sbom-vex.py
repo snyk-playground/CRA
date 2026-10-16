@@ -19,9 +19,10 @@ file for CycloneDX, or a separate SBOM/VEX file pair for SPDX.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import List, Optional
 
-from snyk_generate_cra_sbom_vex import cli, config, discovery, enrich, logging_setup, reporting, sbom, vex, writers
+from snyk_generate_cra_sbom_vex import cli, config, cra_check, discovery, enrich, logging_setup, reporting, sbom, vex, writers
 from snyk_generate_cra_sbom_vex.errors import SnykCraSbomVexError
 from snyk_generate_cra_sbom_vex.snyk_api.client import SnykClient
 
@@ -29,6 +30,15 @@ from snyk_generate_cra_sbom_vex.snyk_api.client import SnykClient
 def main(argv: Optional[List[str]] = None) -> int:
     args = cli.parse_args(argv)
     print(reporting.render_banner(cli.PROG_NAME, cli.DESCRIPTION), flush=True)
+
+    if args.check_cra:
+        try:
+            findings = cra_check.check_file(Path(args.check_cra))
+        except (OSError, ValueError) as exc:
+            print(f"cannot read {args.check_cra} as a CycloneDX JSON file: {exc}", file=sys.stderr)
+            return 2
+        print(cra_check.render_report(findings), flush=True)
+        return 1 if any(not f.ok for f in findings) else 0
 
     # Configure logging before the token is known so any error raised
     # while resolving it is still reported (nothing sensitive can reach
@@ -110,7 +120,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     print(reporting.render_sbom_fetch_table(fetch_results), flush=True)
 
-    merge_result = sbom.merge_sboms(fetch_results, run_config.sbom_format, run_config.product)
+    merge_result = sbom.merge_sboms(
+        fetch_results, run_config.sbom_format, run_config.product, run_config.dependency_completeness
+    )
     if merge_result.skipped_reason:
         logger.warning(merge_result.skipped_reason)
     print(reporting.render_merge_summary(merge_result), flush=True)
@@ -132,6 +144,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.error(str(exc))
         return exc.exit_code
     print(reporting.render_write_summary(write_result), flush=True)
+    if merge_result.document is not None:
+        report_doc = dict(merge_result.document)
+        if vex_result.document:
+            report_doc["vulnerabilities"] = vex_result.document.get("vulnerabilities", [])
+        print(cra_check.render_report(cra_check.check_document(report_doc)), flush=True)
 
     return 1 if fail_count else 0
 

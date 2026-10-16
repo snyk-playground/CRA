@@ -206,6 +206,27 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    product.add_argument(
+        "--dependency-completeness",
+        choices=("unknown", "incomplete", "complete"),
+        default="unknown",
+        help=(
+            "Completeness of the dependency list, written as a CycloneDX "
+            "composition (default: unknown). Only assert 'complete' if you have "
+            "verified that no vendored or natively linked code is missing."
+        ),
+    )
+    parser.add_argument(
+        "--check-cra",
+        metavar="FILE",
+        default=None,
+        help=(
+            "Don't generate anything: report which CRA-relevant fields the "
+            "CycloneDX SBOM/VEX file FILE lacks, then exit (1 if any are missing, "
+            "else 0). Needs no token or network access."
+        ),
+    )
+
     behavior = parser.add_argument_group("run behavior")
     behavior.add_argument(
         "--fail-fast",
@@ -238,6 +259,9 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     """
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.check_cra:
+        return args
 
     if not any((args.org, args.target, args.asset, args.project, args.group, args.tag)):
         parser.error(

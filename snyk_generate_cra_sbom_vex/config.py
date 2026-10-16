@@ -116,6 +116,7 @@ class RunConfig:
     product: ProductMetadata = ProductMetadata()
     cra_strict: bool = False
     enrich_maven: bool = False
+    dependency_completeness: str = "unknown"
 
 
 def resolve_token(args: argparse.Namespace) -> str:
@@ -194,4 +195,5 @@ def build_config(args: argparse.Namespace) -> RunConfig:
         product=product,
         cra_strict=cra_strict,
         enrich_maven=bool(getattr(args, "enrich_maven", False)),
+        dependency_completeness=getattr(args, "dependency_completeness", "unknown"),
     )

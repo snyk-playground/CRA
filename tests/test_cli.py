@@ -92,6 +92,15 @@ class ParseArgsTests(unittest.TestCase):
         args = cli.parse_args(["--org", "A", "-v"])
         self.assertTrue(args.debug)
 
+    def test_check_cra_needs_no_source(self):
+        args = cli.parse_args(["--check-cra", "sbom.cdx.json"])
+        self.assertEqual(args.check_cra, "sbom.cdx.json")
+
+    def test_dependency_completeness_default_and_choice(self):
+        self.assertEqual(cli.parse_args(["--org", "A"]).dependency_completeness, "unknown")
+        args = cli.parse_args(["--org", "A", "--dependency-completeness", "incomplete"])
+        self.assertEqual(args.dependency_completeness, "incomplete")
+
     def test_no_vex_and_fail_fast_flags(self):
         args = cli.parse_args(["--org", "A", "--no-vex", "--fail-fast"])
         self.assertTrue(args.no_vex)

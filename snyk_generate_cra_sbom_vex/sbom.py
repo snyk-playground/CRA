@@ -177,6 +177,27 @@ def _component_identity(component: Dict[str, Any]) -> str:
     return "no-purl:" + "|".join(parts)
 
 
+# CycloneDX `compositions[].aggregate` values the operator may assert for the
+# dependency list. "unknown" is the default: Snyk resolves dependencies from
+# manifests/lockfiles, so vendored or natively linked code can be missing and
+# the tool can't vouch for completeness on the operator's behalf.
+COMPLETENESS_CHOICES = ("unknown", "incomplete", "complete")
+DEFAULT_COMPLETENESS = "unknown"
+
+
+def build_compositions(components: List[Dict[str, Any]], product: Optional[ProductMetadata], completeness: str) -> List[Dict[str, Any]]:
+    """One composition stating how complete the dependency list is.
+
+    Scoped to the product's dependencies when a product is declared, otherwise
+    to every aggregated component.
+    """
+    if product and product.product_name:
+        scope: Dict[str, Any] = {"dependencies": [f"product:{product.product_name}"]}
+    else:
+        scope = {"assemblies": [c["bom-ref"] for c in components]}
+    return [{"bom-ref": "composition:dependencies", "aggregate": completeness, **scope}]
+
+
 def build_identity_metadata(product: ProductMetadata, spec_version: str) -> Dict[str, Any]:
     """Builds the manufacturer / authors / component entries for `metadata`.
 
@@ -221,6 +242,7 @@ def merge_sboms(
     fetch_results: List[SbomFetchResult],
     sbom_format: str,
     product: Optional[ProductMetadata] = None,
+    completeness: str = DEFAULT_COMPLETENESS,
 ) -> MergeResult:
     """Aggregates every successfully fetched SBOM into one CycloneDX document.
 
@@ -339,6 +361,12 @@ def merge_sboms(
         "components": components,
         "dependencies": dependencies,
     }
+    if tuple(int(x) for x in spec_version.split(".")) >= (1, 5):
+        # Lifecycles arrived in CycloneDX 1.5. Snyk derives the component list
+        # from manifests and lockfiles (and a container's base image), i.e.
+        # before the product is built.
+        document["metadata"]["lifecycles"] = [{"phase": "pre-build"}]
+    document["compositions"] = build_compositions(components, product, completeness)
 
     return MergeResult(
         document=document,

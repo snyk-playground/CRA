@@ -163,6 +163,31 @@ class MergeSbomsTests(unittest.TestCase):
         self.assertEqual(refs1, sorted(refs1))
 
 
+class LifecycleAndCompositionTests(unittest.TestCase):
+    DOC = {"components": [{"bom-ref": "1", "purl": "pkg:maven/shared@1.0", "name": "shared"}]}
+
+    def _merge(self, fmt="cyclonedx1.6+json", product=None, **kwargs):
+        return sbom.merge_sboms([fetch_ok("org-1", "p1", self.DOC)], fmt, product, **kwargs).document
+
+    def test_lifecycle_and_default_unknown_composition_over_components(self):
+        doc = self._merge()
+        self.assertEqual(doc["metadata"]["lifecycles"], [{"phase": "pre-build"}])
+        (comp,) = doc["compositions"]
+        self.assertEqual(comp["aggregate"], "unknown")
+        self.assertEqual(comp["assemblies"], [c["bom-ref"] for c in doc["components"]])
+
+    def test_composition_scoped_to_product_with_operator_completeness(self):
+        from snyk_generate_cra_sbom_vex.config import ProductMetadata
+
+        doc = self._merge(product=ProductMetadata(product_name="App"), completeness="incomplete")
+        (comp,) = doc["compositions"]
+        self.assertEqual((comp["aggregate"], comp["dependencies"]), ("incomplete", ["product:App"]))
+        self.assertNotIn("assemblies", comp)
+
+    def test_no_lifecycles_before_cyclonedx_1_5(self):
+        self.assertNotIn("lifecycles", self._merge("cyclonedx1.4+json")["metadata"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
