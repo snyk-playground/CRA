@@ -8,13 +8,12 @@ organizations, targets, assets, projects, groups, and tags.
 > **Disclaimer — educational and demonstration use**
 >
 > This script is primarily intended for **educational and demonstration
-> purposes**. Use it with caution in production environments. It is provided
-> "as is", without warranty of any kind, express or implied. The author cannot
-> be held responsible for any unintended outcomes resulting from its use,
-> including the Snyk API calls it makes, the accuracy or completeness of the
-> generated SBOM/VEX documents, or any action taken based on their contents.
-> Review the output and validate it against your own compliance requirements
-> before relying on it.
+> purposes**. Use it with caution. It is provided "as is", without warranty
+> of any kind, express or implied. The author cannot be held responsible for
+> any unintended outcomes resulting from its use, including the Snyk API calls
+> it makes, the accuracy or completeness of the generated SBOM/VEX documents,
+> or any action taken based on their contents. Review the output and validate
+> it against your own compliance requirements before relying on it.
 
 ## Requirements
 
